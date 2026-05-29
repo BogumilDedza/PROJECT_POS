@@ -1,2 +1,2 @@
 # PROJECT_POS
-Image processing program
+Image processing program using C++ and OpenCV
