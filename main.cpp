@@ -108,7 +108,6 @@ std::vector<fs::path> collect_images(const std::string& dir) {
     return files;
 }
 
-C++
 /**
  * @brief Testuje wczytywanie i zapisywanie obrazu za pomocą OpenCV.
  *
@@ -133,6 +132,62 @@ void test_read_write(const std::string& src, const std::string& dst) {
     /// Zapisanie obrazu we wskazanej lokalizacji docelowej
     cv::imwrite(dst, img);
     std::cout << "Read/write OK: " << src << "\n";
+}
+
+/**
+ * @brief Wykrywa krawędzie na obrazie i rysuje na nim zielone kontury.
+ *
+ * Algorytm przetwarza obraz wejściowy poprzez konwersję do skali szarości,
+ * rozmycie Gaussa (w celu usunięcia szumów) oraz detekcję krawędzi metodą
+ * Canny'ego. Progi dla detektora są dobierane automatycznie na podstawie
+ * mediany jasności obrazu.
+ *
+ * @param src Obraz wejściowy w formacie cv::Mat
+ * @return Kopia oryginalnego obrazu z naniesionymi obrysami
+ */
+cv::Mat detect_contours(const cv::Mat& src) {
+    cv::Mat gray, blur, edges, result;
+
+    /// -# Konwersja przestrzeni barw do skali szarości w zależności od wejścia
+    if (src.channels() == 3)
+        cv::cvtColor(src, gray, cv::COLOR_BGR2GRAY);
+    else if (src.channels() == 4)
+        cv::cvtColor(src, gray, cv::COLOR_BGRA2GRAY);
+    else
+        gray = src.clone();
+
+    /// -# Redukcja szumów za pomocą filtru dolnoprzepustowego (kernel 5x5)
+    cv::GaussianBlur(gray, blur, cv::Size(5, 5), 0);
+
+    /// -# Obliczenie średniej jasności obrazu dla dynamicznych progów Canny'ego
+    cv::Scalar m = cv::mean(blur);
+    double median = m[0];
+
+    /// -# Wyznaczenie dolnego (lo) i górnego (hi) progu detekcji krawędzi
+    double lo = std::max(0.0,   0.66 * median);
+    double hi = std::min(255.0, 1.33 * median);
+
+    /// -# Generowanie maski binarnej krawędzi (algorytm Canny'ego)
+    cv::Canny(blur, edges, lo, hi);
+
+    /// Deklaracja kontenerów na punkty konturów i topologię (hierarchię)
+    std::vector<std::vector<cv::Point>> contours;
+    std::vector<cv::Vec4i> hierarchy;
+
+    /// -# Poszukiwanie konturów na podstawie wygenerowanej maski
+    cv::findContours(edges, contours, hierarchy,
+                     cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE);
+
+    result = src.clone();
+
+    /// -# Zapewnienie 3-kanałowej przestrzeni barw (BGR) do narysowania linii
+    if (result.channels() == 1)
+        cv::cvtColor(result, result, cv::COLOR_GRAY2BGR);
+
+    /// -# Narysowanie wszystkich znalezionych konturów (grubość 1px, kolor zielony)
+    cv::drawContours(result, contours, -1, cv::Scalar(0, 255, 0), 1);
+
+    return result;
 }
 
 /**
