@@ -17,6 +17,7 @@
 #include <filesystem>
 #include <thread>
 #include "ini.h"
+#include <opencv2/opencv.hpp>
 
 namespace fs = std::filesystem;
 
@@ -105,6 +106,33 @@ std::vector<fs::path> collect_images(const std::string& dir) {
     }
     std::sort(files.begin(), files.end());
     return files;
+}
+
+C++
+/**
+ * @brief Testuje wczytywanie i zapisywanie obrazu za pomocą OpenCV.
+ *
+ * Funkcja weryfikuje poprawność działania biblioteki OpenCV poprzez
+ * próbę załadowania pliku z dysku do struktury cv::Mat. W przypadku
+ * braku pliku lub błędu odczytu, wypisuje komunikat na standardowe
+ * wyjście błędów.
+ *
+ * @param src Ścieżka do pliku wejściowego
+ * @param dst Ścieżka docelowa dla zapisanego obrazu
+ */
+void test_read_write(const std::string& src, const std::string& dst) {
+    /// Wczytanie obrazu do pamięci w trybie kolorowym (BGR)
+    cv::Mat img = cv::imread(src, cv::IMREAD_COLOR);
+
+    /// Sprawdzenie, czy alokacja pamięci i dekodowanie pliku powiodły się
+    if (img.empty()) {
+        std::cerr << "Failed to read: " << src << "\n";
+        return;
+    }
+
+    /// Zapisanie obrazu we wskazanej lokalizacji docelowej
+    cv::imwrite(dst, img);
+    std::cout << "Read/write OK: " << src << "\n";
 }
 
 /**
